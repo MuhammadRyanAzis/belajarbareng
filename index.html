@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Kaleidoskop Interaktif | Animasi & Kompleksitas</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none; /* mencegah teks terpilih saat interaksi */
+        }
+
+        body {
+            min-height: 100vh;
+            background: radial-gradient(circle at 20% 30%, #0a0f1e, #03060c);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Poppins', 'Segoe UI', system-ui, -apple-system, 'Inter', sans-serif;
+            overflow-x: hidden;
+            cursor: crosshair;
+        }
+
+        /* Wrapper utama dengan efek glassmorphism dan border dinamis */
+        .universe {
+            position: relative;
+            width: 95vw;
+            max-width: 1400px;
+            min-height: 85vh;
+            background: rgba(12, 20, 30, 0.45);
+            backdrop-filter: blur(12px);
+            border-radius: 3rem;
+            padding: 1.5rem;
+            box-shadow: 0 25px 45px rgba(0,0,0,0.4), inset 0 1px 2px rgba(255,255,255,0.1);
+            border: 1px solid rgba(100, 200, 255, 0.25);
+            transition: all 0.3s ease;
+            overflow: hidden;
+        }
+
+        /* Grid partikel animasi background (kanvas terpisah) */
+        #particleCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+            border-radius: inherit;
+        }
+
+        /* konten utama di atas canvas */
+        .content {
+            position: relative;
+            z-index: 2;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        /* header interaktif dengan teks gradasi bergerak */
+        .hero {
+            text-align: center;
+            padding: 0.5rem;
+        }
+
+        .hero h1 {
+            font-size: clamp(2rem, 8vw, 4.2rem);
+            font-weight: 800;
+            background: linear-gradient(135deg, #ffe6b0, #ffb347, #ff6a4b, #c86eff);
+            background-size: 300% 300%;
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            animation: gradientShift 6s ease infinite;
+            letter-spacing: -0.02em;
+            text-shadow: 0 0 15px rgba(255,100,100,0.3);
+        }
+
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .hero p {
+            color: #b9e2ff;
+            font-weight: 500;
+            margin-top: 0.5rem;
+            font-size: 1.1rem;
+            backdrop-filter: blur(4px);
+        }
+
+        /* panel kendali & visual interaktif utama */
+        .dashboard {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1.8rem;
+            justify-content: center;
+        }
+
+        /* Kartu interaktif dengan efek 3D dan hover */
+        .card {
+            background: rgba(20, 30, 45, 0.7);
+            backdrop-filter: blur(8px);
+            border-radius: 2rem;
+            padding: 1.5rem;
+            flex: 1;
+            min-width: 240px;
+            transition: all 0.4s cubic-bezier(0.2, 0.9, 0.4, 1.1);
+            border: 1px solid rgba(255,255,200,0.2);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+            transform-style: preserve-3d;
+        }
+
+        .card:hover {
+            transform: translateY(-8px) scale(1.01);
+            border-color: rgba(255, 180, 80, 0.6);
+            box-shadow: 0 20px 30px -10px rgba(0,0,0,0.5);
+            background: rgba(30, 45, 65, 0.8);
+        }
+
+        .card h3 {
+            color: #ffdf9c;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            font-size: 1.6rem;
+            border-left: 4px solid #ffaa44;
+            padding-left: 0.8rem;
+        }
+
+        /* elemen animasi tombol & interaksi */
+        .orb-container {
+            display: flex;
+            justify-content: center;
+            margin: 20px 0;
+        }
+
+        .interactive-orb {
+            width: 120px;
+            height: 120px;
+            background: radial-gradient(circle at 35% 35%, #ffb347, #ff4d6d);
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 30px rgba(255,80,80,0.7);
+            transition: all 0.2s ease;
+            animation: floatGlow 3s infinite alternate;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 2rem;
+            color: white;
+            text-shadow: 0 2px 5px black;
+        }
+
+        @keyframes floatGlow {
+            0% { transform: translateY(0px) scale(1); box-shadow: 0 0 15px #ff8866; }
+            100% { transform: translateY(-12px) scale(1.03); box-shadow: 0 0 40px #ff3a6f; }
+        }
+
+        .interactive-orb:active {
+            transform: scale(0.96);
+            transition: 0.05s;
+        }
+
+        /* slider & value display */
+        .slider-group {
+            margin: 1rem 0;
+        }
+        .slider-group label {
+            color: #d4f1ff;
+            font-weight: 500;
+            display: flex;
+            justify-content: space-between;
+        }
+        input[type="range"] {
+            width: 100%;
+            margin: 0.5rem 0;
+            background: #1e2a3a;
+            height: 4px;
+            border-radius: 10px;
+            -webkit-appearance: none;
+        }
+        input[type="range"]:focus {
+            outline: none;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #ffaa66;
+            cursor: pointer;
+            box-shadow: 0 0 6px #ffcc88;
+            transition: 0.1s;
+        }
+
+        /* area kanvas animasi bentuk geometris */
+        .canvas-area {
+            background: rgba(0, 0, 0, 0.35);
+            border-radius: 1.8rem;
+            padding: 1rem;
+            margin-top: 0.5rem;
+        }
+        #dynamicCanvas {
+            display: block;
+            width: 100%;
+            background: #03070f80;
+            border-radius: 1.2rem;
+            box-shadow: inset 0 0 30px rgba(0,0,0,0.5), 0 5px 15px rgba(0,0,0,0.3);
+            cursor: crosshair;
+        }
+
+        .info-panel {
+            display: flex;
+            justify-content: space-between;
+            gap: 1rem;
+            font-size: 0.9rem;
+            color: #bbddff;
+            background: #0a101cee;
+            padding: 0.7rem 1.2rem;
+            border-radius: 2rem;
+            backdrop-filter: blur(4px);
+        }
+
+        button {
+            background: linear-gradient(95deg, #2b3b4e, #1c2a3a);
+            border: none;
+            padding: 0.6rem 1.2rem;
+            border-radius: 2rem;
+            color: #ffecb3;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.2s;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            font-size: 0.9rem;
+        }
+        button:hover {
+            background: linear-gradient(95deg, #3f556b, #2b3e54);
+            transform: scale(0.97);
+            color: white;
+            box-shadow: 0 5px 12px black;
+        }
+
+        footer {
+            text-align: center;
+            font-size: 0.75rem;
+            color: #88aacc;
+            margin-top: 1rem;
+        }
+
+        @media (max-width: 760px) {
+            .universe {
+                padding: 0.8rem;
+            }
+            .card {
+                padding: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="universe">
+    <canvas id="particleCanvas"></canvas>
+    <div class="content">
+        <div class="hero">
+            <h1>✦ SYNAPSE NEXUS ✦</h1>
+            <p>interaksi | animasi cair | realtime visual complex</p>
+        </div>
+
+        <div class="dashboard">
+            <!-- Kartu 1: Orb taktil & klik -->
+            <div class="card">
+                <h3>🌀 Klik Orb</h3>
+                <div class="orb-container">
+                    <div class="interactive-orb" id="magicOrb">✨</div>
+                </div>
+                <div class="slider-group">
+                    <label>🌀 Efek Getaran <span id="vibeValue">0.8</span></label>
+                    <input type="range" id="vibeSlider" min="0" max="1.5" step="0.01" value="0.8">
+                </div>
+                <div class="info-panel" style="margin-top: 10px;">
+                    <span>⚡ Klik: <span id="clickCount">0</span></span>
+                    <span>🎯 Terakhir: <span id="lastEffect">-</span></span>
+                </div>
+                <button id="resetStatsBtn">⟳ Reset Interaksi</button>
+            </div>
+
+            <!-- Kartu 2: Kanvas Dinamis + kontrol animasi bentuk -->
+            <div class="card" style="flex: 2;">
+                <h3>🎨 Geometri Reaktif</h3>
+                <div class="canvas-area">
+                    <canvas id="dynamicCanvas" width="500" height="300" style="width:100%; height:auto; max-width:100%; aspect-ratio:500/300"></canvas>
+                </div>
+                <div style="display: flex; gap: 12px; flex-wrap: wrap; margin-top: 10px; justify-content: space-between;">
+                    <div>
+                        <label style="color:#ffdb9f">🌀 Jumlah objek</label>
+                        <input type="range" id="shapeCountSlider" min="3" max="45" step="1" value="18">
+                        <span id="countVal" style="color:white">18</span>
+                    </div>
+                    <div>
+                        <label style="color:#ffdb9f">💨 Kecepatan rotasi</label>
+                        <input type="range" id="speedSlider" min="0" max="0.03" step="0.001" value="0.012">
+                        <span id="speedVal" style="color:white">0.012</span>
+                    </div>
+                    <button id="chaosBtn">⚡ Kekacauan Visual</button>
+                </div>
+            </div>
+
+            <!-- Kartu 3: Warna & Efek partikel (real-time) -->
+            <div class="card">
+                <h3>🌈 Kroma Partikel</h3>
+                <div class="slider-group">
+                    <label>🎨 Hue Rotasi <span id="hueVal">0</span>°</label>
+                    <input type="range" id="hueSlider" min="0" max="360" value="0">
+                </div>
+                <div class="slider-group">
+                    <label>✨ Jumlah Partikel Latar <span id="partCountVal">220</span></label>
+                    <input type="range" id="particleCountSlider" min="60" max="500" step="10" value="220">
+                </div>
+                <button id="toggleWaveBtn">🌊 Aktifkan Gelombang Warna</button>
+                <div class="info-panel" style="margin-top: 12px;">
+                    <span>🖱️ Posisi Mouse (canvas): </span>
+                    <span id="mouseCoord">0,0</span>
+                </div>
+            </div>
+        </div>
+        <footer>
+            💡 sentuh / gerakkan mouse di kanvas → bentuk bereaksi | klik orb → partikel meledak | semua animasi realtime
+        </footer>
+    </div>
+</div>
+
+<script>
+    (function(){
+        // ---------- 1. PARTIKEL LATAR BELAKANG (canvas absolut) ----------
+        const particleCanvas = document.getElementById('particleCanvas');
+        let pCtx = particleCanvas.getContext('2d');
+        let particles = [];
+        let particleCount = 220;
+        
+        function resizeParticleCanvas() {
+            const container = document.querySelector('.universe');
+            const rect = container.getBoundingClientRect();
+            particleCanvas.width = rect.width;
+            particleCanvas.height = rect.height;
+            initParticles();
+        }
+        
+        function initParticles() {
+            particles = [];
+            for(let i=0; i<particleCount; i++) {
+                particles.push({
+                    x: Math.random() * particleCanvas.width,
+                    y: Math.random() * particleCanvas.height,
+                    radius: 2 + Math.random() * 4,
+                    vx: (Math.random() - 0.5) * 0.5,
+                    vy: (Math.random() - 0.5) * 0.3,
+                    alpha: 0.3 + Math.random() * 0.5,
+                    colorHue: Math.random() * 360
+                });
+            }
+        }
+        
+        function updateParticles() {
+            if(!particleCanvas.width || !particleCanvas.height) return;
+            for(let p of particles) {
+                p.x += p.vx;
+                p.y += p.vy;
+                if(p.x < 0) p.x = particleCanvas.width;
+                if(p.x > particleCanvas.width) p.x = 0;
+                if(p.y < 0) p.y = particleCanvas.height;
+                if(p.y > particleCanvas.height) p.y = 0;
+                // sedikit perubahan warna
+                p.colorHue = (p.colorHue + 0.5) % 360;
+            }
+        }
+        
+        function drawParticles(globalHueOffset) {
+            if(!pCtx) return;
+            pCtx.clearRect(0, 0, particleCanvas.width, particleCanvas.height);
+            for(let p of particles) {
+                let hue = (p.colorHue + globalHueOffset) % 360;
+                pCtx.beginPath();
+                pCtx.arc(p.x, p.y, p.radius, 0, Math.PI*2);
+                pCtx.fillStyle = `hsla(${hue}, 75%, 65%, ${p.alpha})`;
+                pCtx.fill();
+                // efek glow kecil
+                pCtx.shadowBlur = 5;
+                pCtx.shadowColor = `hsl(${hue}, 80%, 70%)`;
+                pCtx.fill();
+            }
+            pCtx.shadowBlur = 0;
+        }
+        
+        // ---------- 2. KANVAS DINAMIS (geometri kompleks interaktif) ----------
+        const dynCanvas = document.getElementById('dynamicCanvas');
+        const ctx = dynCanvas.getContext('2d');
+        let width = 500, height = 300;
+        function resizeDynamicCanvas() {
+            const container = dynCanvas.parentElement;
+            const computedWidth = container.clientWidth;
+            dynCanvas.width = computedWidth;
+            dynCanvas.height = computedWidth * (300/500);
+            width = dynCanvas.width;
+            height = dynCanvas.height;
+            drawShapes(); // redraw segera
+        }
+        window.addEventListener('resize', () => {
+            resizeParticleCanvas();
+            resizeDynamicCanvas();
+        });
+        
+        // parameter bentuk
+        let shapeCount = 18;
+        let rotationSpeed = 0.012;
+        let angleOffset = 0;
+        let shapesArray = [];
+        let waveMode = false;
+        let globalHue = 0;
+        
+        function initShapes() {
+            shapesArray = [];
+            for(let i=0; i<shapeCount; i++) {
+                let radius = 15 + Math.random() * 28;
+                let offsetAngle = (Math.PI * 2 / shapeCount) * i;
+                let distFromCenter = Math.min(width, height) * 0.28 + Math.random() * 20;
+                shapesArray.push({
+                    radius: radius,
+                    baseXOffset: Math.cos(offsetAngle) * distFromCenter,
+                    baseYOffset: Math.sin(offsetAngle) * distFromCenter,
+                    angleSpeed: 0.005 + Math.random() * 0.01,
+                    phase: Math.random() * Math.PI * 2,
+                    type: Math.floor(Math.random() * 3), // 0: lingkaran, 1: segitiga, 2: segiempat
+                });
+            }
+        }
+        
+        function drawShapes() {
+            if(!ctx) return;
+            ctx.clearRect(0, 0, width, height);
+            const centerX = width/2;
+            const centerY = height/2;
+            // efek gradien latar dinamis
+            let grad = ctx.createLinearGradient(0, 0, width, height);
+            grad.addColorStop(0, `hsla(${globalHue}, 60%, 12%, 0.7)`);
+            grad.addColorStop(1, `hsla(${(globalHue+180)%360}, 70%, 8%, 0.9)`);
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, width, height);
+            
+            // menggambar bentuk bereaksi mouse
+            let mouseX = mouseCanvasX, mouseY = mouseCanvasY;
+            for(let i=0; i<shapesArray.length; i++) {
+                let s = shapesArray[i];
+                let timeAngle = angleOffset + s.phase;
+                let moveX = Math.sin(timeAngle * 1.7) * 6;
+                let moveY = Math.cos(timeAngle * 1.2) * 6;
+                let x = centerX + s.baseXOffset + moveX;
+                let y = centerY + s.baseYOffset + moveY;
+                
+                // interaksi mouse: tolak menolak / menarik (efek kompleks)
+                let dx = mouseX - x;
+                let dy = mouseY - y;
+                let dist = Math.hypot(dx, dy);
+                if(dist < 70 && dist > 5) {
+                    let angleMouse = Math.atan2(dy, dx);
+                    let force = (70 - dist) / 70 * 12;
+                    x -= Math.cos(angleMouse) * force;
+                    y -= Math.sin(angleMouse) * force;
+                }
+                // batasi batas
+                x = Math.min(width-15, Math.max(15, x));
+                y = Math.min(height-15, Math.max(15, y));
+                
+                let hueShape = (globalHue + i * 25) % 360;
+                ctx.save();
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = `hsl(${hueShape}, 85%, 65%)`;
+                ctx.fillStyle = `hsla(${hueShape}, 85%, 65%, 0.85)`;
+                ctx.beginPath();
+                if(s.type === 0) {
+                    ctx.arc(x, y, s.radius, 0, Math.PI*2);
+                    ctx.fill();
+                } else if(s.type === 1) {
+                    // segitiga
+                    let ang = angleOffset * 5 + i;
+                    let r = s.radius;
+                    for(let t=0; t<3; t++) {
+                        let a = ang + (t * Math.PI*2/3);
+                        let px = x + Math.cos(a)*r;
+                        let py = y + Math.sin(a)*r;
+                        if(t===0) ctx.moveTo(px,py);
+                        else ctx.lineTo(px,py);
+                    }
+                    ctx.closePath();
+                    ctx.fill();
+                } else {
+                    // persegi
+                    let size = s.radius * 1.2;
+                    ctx.fillRect(x-size/2, y-size/2, size, size);
+                }
+                ctx.restore();
+                // garis penghubung antar bentuk (efek jaringan)
+                ctx.beginPath();
+                ctx.strokeStyle = `hsla(${hueShape}, 70%, 70%, 0.3)`;
+                ctx.lineWidth = 1.2;
+                for(let j=i+1; j<shapesArray.length; j+=3) {
+                    let s2 = shapesArray[j];
+                    let x2 = centerX + s2.baseXOffset + Math.sin(angleOffset * 1.7 + s2.phase) * 6;
+                    let y2 = centerY + s2.baseYOffset + Math.cos(angleOffset * 1.2 + s2.phase) * 6;
+                    let dx2 = mouseX - x2;
+                    let dy2 = mouseY - y2;
+                    let dist2 = Math.hypot(dx2, dy2);
+                    if(dist2 < 70 && dist2 > 5) {
+                        let angM = Math.atan2(dy2, dx2);
+                        let force = (70 - dist2) / 70 * 12;
+                        x2 -= Math.cos(angM) * force;
+                        y2 -= Math.sin(angM) * force;
+                    }
+                    ctx.moveTo(x, y);
+                    ctx.lineTo(x2, y2);
+                    ctx.stroke();
+                }
+            }
+            
+            // efek ripple pada mouse (lingkaran dinamis)
+            if(mousePresent && rippleIntensity > 0) {
+                ctx.beginPath();
+                ctx.arc(mouseCanvasX, mouseCanvasY, rippleRadius, 0, Math.PI*2);
+                ctx.strokeStyle = `hsla(${globalHue+40}, 100%, 70%, 0.8)`;
+                ctx.lineWidth = 2.5;
+                ctx.stroke();
+                rippleRadius += 3;
+                if(rippleRadius > 50) rippleIntensity = 0;
+            }
+        }
+        
+        // animasi loop gabungan
+        let angle = 0;
+        let rippleIntensity = 0;
+        let rippleRadius = 5;
+        let mousePresent = false;
+        let mouseCanvasX = width/2, mouseCanvasY = height/2;
+        
+        // data klik orb & statistik
+        let clickCounter = 0;
+        let lastEffectMsg = "None";
+        let vibeFactor = 0.8;
+        
+        const orb = document.getElementById('magicOrb');
+        const clickSpan = document.getElementById('clickCount');
+        const lastEffectSpan = document.getElementById('lastEffect');
+        const vibeSlider = document.getElementById('vibeSlider');
+        const vibeValSpan = document.getElementById('vibeValue');
+        const resetBtn = document.getElementById('resetStatsBtn');
+        const shapeSlider = document.getElementById('shapeCountSlider');
+        const countValSpan = document.getElementById('countVal');
+        const speedSlider = document.getElementById('speedSlider');
+        const speedValSpan = document.getElementById('speedVal');
+        const chaosBtn = document.getElementById('chaosBtn');
+        const hueSlider = document.getElementById('hueSlider');
+        const hueValSpan = document.getElementById('hueVal');
+        const particleCountSlider = document.getElementById('particleCountSlider');
+        const partCountSpan = document.getElementById('partCountVal');
+        const toggleWaveBtn = document.getElementById('toggleWaveBtn');
+        const mouseCoordSpan = document.getElementById('mouseCoord');
+        
+        // event orb & efek getar
+        orb.addEventListener('click', (e) => {
+            clickCounter++;
+            clickSpan.innerText = clickCounter;
+            lastEffectMsg = `💥 Ledakan Partikel!`;
+            lastEffectSpan.innerText = lastEffectMsg;
+            // ledakan partikel: membuat efek ripple dan menambah banyak partikel sementara
+            rippleIntensity = 1;
+            rippleRadius = 8;
+            mousePresent = true;
+            // dapatkan posisi orb (klik) dan kirim ke kanvas efek
+            // tambahkan getaran
+            orb.style.transform = `scale(${1 - vibeFactor*0.1})`;
+            setTimeout(() => { orb.style.transform = ''; }, 120);
+            // menambah partikel latar sementara (burst)
+            for(let i=0;i<30;i++) {
+                particles.push({
+                    x: Math.random() * particleCanvas.width,
+                    y: Math.random() * particleCanvas.height,
+                    radius: 2+Math.random()*5,
+                    vx: (Math.random()-0.5)*2,
+                    vy: (Math.random()-0.5)*2,
+                    alpha: 0.9,
+                    colorHue: Math.random()*360
+                });
+            }
+            setTimeout(() => {
+                if(particles.length > particleCount+50) particles.splice(particleCount, particles.length-particleCount);
+            }, 800);
+        });
+        
+        vibeSlider.addEventListener('input', (e) => {
+            vibeFactor = parseFloat(e.target.value);
+            vibeValSpan.innerText = vibeFactor.toFixed(2);
+        });
+        
+        resetBtn.addEventListener('click', () => {
+            clickCounter = 0;
+            clickSpan.innerText = '0';
+            lastEffectSpan.innerText = 'reset';
+            lastEffectMsg = 'reset';
+        });
+        
+        // kontrol kanvas bentuk
+        shapeSlider.addEventListener('input', (e) => {
+            shapeCount = parseInt(e.target.value);
+            countValSpan.innerText = shapeCount;
+            initShapes();
+        });
+        speedSlider.addEventListener('input', (e) => {
+            rotationSpeed = parseFloat(e.target.value);
+            speedValSpan.innerText = rotationSpeed.toFixed(4);
+        });
+        chaosBtn.addEventListener('click', () => {
+            for(let s of shapesArray) {
+                s.radius = Math.max(8, Math.min(45, s.radius + (Math.random()-0.5)*12));
+                s.type = Math.floor(Math.random()*3);
+            }
+            lastEffectSpan.innerText = 'chaos mode!';
+            setTimeout(()=>{if(lastEffectSpan.innerText === 'chaos mode!') lastEffectSpan.innerText = lastEffectMsg;}, 800);
+        });
+        
+        // global hue untuk partikel & kanvas
+        hueSlider.addEventListener('input', (e) => {
+            globalHue = parseInt(e.target.value);
+            hueValSpan.innerText = globalHue;
+        });
+        
+        particleCountSlider.addEventListener('input', (e) => {
+            particleCount = parseInt(e.target.value);
+            partCountSpan.innerText = particleCount;
+            initParticles();
+        });
+        
+        toggleWaveBtn.addEventListener('click', () => {
+            waveMode = !waveMode;
+            toggleWaveBtn.innerText = waveMode ? "🌊 Gelombang AKTIF" : "🌊 Aktifkan Gelombang";
+        });
+        
+        // event mouse di kanvas dinamis
+        dynCanvas.addEventListener('mousemove', (e) => {
+            const rect = dynCanvas.getBoundingClientRect();
+            const scaleX = dynCanvas.width / rect.width;
+            const scaleY = dynCanvas.height / rect.height;
+            let mouseXCanvas = (e.clientX - rect.left) * scaleX;
+            let mouseYCanvas = (e.clientY - rect.top) * scaleY;
+            mouseCanvasX = Math.min(width, Math.max(0, mouseXCanvas));
+            mouseCanvasY = Math.min(height, Math.max(0, mouseYCanvas));
+            mouseCoordSpan.innerText = `${Math.floor(mouseCanvasX)},${Math.floor(mouseCanvasY)}`;
+            mousePresent = true;
+        });
+        dynCanvas.addEventListener('mouseleave', () => {
+            mousePresent = false;
+            mouseCoordSpan.innerText = 'out';
+        });
+        
+        // animasi utama
+        let lastTimestamp = 0;
+        function animate(timestamp) {
+            requestAnimationFrame(animate);
+            angle += rotationSpeed;
+            angleOffset = angle;
+            if(waveMode) globalHue = (globalHue + 1.2) % 360;
+            hueSlider.value = globalHue;
+            hueValSpan.innerText = Math.floor(globalHue);
+            // update partikel latar
+            updateParticles();
+            drawParticles(globalHue);
+            // gambar shape dinamis
+            drawShapes();
+            if(rippleIntensity > 0) {
+                rippleIntensity -= 0.03;
+                if(rippleIntensity <= 0) rippleIntensity = 0;
+            } else rippleRadius = 5;
+        }
+        
+        function resizeAll() {
+            resizeParticleCanvas();
+            resizeDynamicCanvas();
+            initShapes();
+            initParticles();
+        }
+        
+        window.addEventListener('resize', resizeAll);
+        resizeAll();
+        initShapes();
+        requestAnimationFrame(animate);
+        
+        // tambahan interaksi untuk vibrasi orb via slider
+        setInterval(() => {
+            if(vibeFactor > 0.3 && clickCounter%7===0 && clickCounter!==0) {
+                // efek acak kecil
+            }
+        }, 500);
+    })();
+</script>
+</body>
+</html>

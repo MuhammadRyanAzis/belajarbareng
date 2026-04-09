@@ -3,7 +3,7 @@
     const particleCanvas = document.getElementById('particleCanvas');
     let pCtx = particleCanvas.getContext('2d');
     let particles = [];
-    let particleCount = 300;
+    let particleCount = 400;
     let darkMode = false;
     
     function resizeParticleCanvas() {
